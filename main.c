@@ -70,6 +70,7 @@ int main(){
         for(i=0; i<strlen(nome)-2; i++){
             printf("%c", nome[i]);
         }
+        printf("\n\n");
 
         fseek(file, (20*(day+j-1))+strlen(nome)+1, SEEK_SET);
         
