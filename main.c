@@ -5,7 +5,6 @@
 
 int main(){
     system("clear");
-    srand(time(NULL));
     int day, i, j, nday, currday, k;
     char nome[30], c, choose;
     FILE *file;
