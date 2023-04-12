@@ -49,9 +49,14 @@ int main(){
                 printf("%c", nome[i]);
             }
             printf(" DAY");
-            printf("\n\n\nL'alunno e' presente e adeguato? Y/N/X(esci)--->");
+            printf("\n\n\nL'alunno e' presente? Y/N/X(esci)--->");
             fflush(stdin);
             scanf("%c", &choose);
+            if(choose=='y' || choose=='Y'){
+                printf("\n\nL'alunno scelto è accettato? Y/N--->");
+                fflush(stdin);
+                scanf("%c", &choose);
+            }
         }
         j++;
         if(j+day==19){
