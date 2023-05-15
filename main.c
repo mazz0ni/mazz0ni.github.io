@@ -5,6 +5,7 @@
 
 int main(){
     system("clear");
+    printf("ALUNNO's DAY v0.2 by mazz0ni.exe\n\n");
     int day, i, j, nday, currday, k;
     char nome[30], c, choose;
     FILE *file;
@@ -53,7 +54,7 @@ int main(){
             fflush(stdin);
             scanf("%c", &choose);
             if(choose=='y' || choose=='Y'){
-                printf("\n\nL'alunno scelto è accettato? Y/N--->");
+                printf("\n\nL'alunno scelto è accettato dal docente? Y/N--->");
                 fflush(stdin);
                 scanf("%c", &choose);
             }
