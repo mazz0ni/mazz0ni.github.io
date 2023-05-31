@@ -36,6 +36,12 @@ body {
     animation:slidebg 2s linear infinite;
   }
   
+.conto {
+  color: white;
+}
+
+
+
   @keyframes slidebg {
     to {
       background-position:20vw;
