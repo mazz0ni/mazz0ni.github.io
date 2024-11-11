@@ -10,6 +10,14 @@
 
 	<body>
 
+		<div class="navbar">
+			<a href="/tris/">TRIS</a>
+			<a href="/alunnosday/">ALUNNO'S DAY</a>
+			<a href="/index.html" class="logo-no-highlight"><img src="/images/logo-endless.png" class="logo-endless"></a>
+			<a href="/countdown/">COUNTDOWN</a>
+			<a href="/estrazione/">ESTRAZIONE</a>
+		</div>
+
 		<center>
 		<div class="title">TRIS</div>
 		<br><br>
