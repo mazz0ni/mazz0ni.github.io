@@ -1,3 +1,9 @@
+<!---
+<?php
+	session_start();
+	if(!isset($_SESSION['logged']) || !$_SESSION['logged']) header('Location: login.php');
+?>
+-->
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -57,10 +63,15 @@
             const result = [];
 
             for (let line of lines) {
-                const [nome, lunghezza] = line.split(';'); // Separazione dei campi per ogni riga
-                if (nome && lunghezza) {
-                    result.push({ nome: nome.trim(), lunghezza: parseInt(lunghezza.trim(), 10) });
+				
+				const [nome, lunghezza, numero] = line.split(';');
+				if (nome && lunghezza && numero) {
+					for(let i=0; i<numero; i++){
+						console.log("boh");
+						result.push({ nome: nome.trim(), lunghezza: parseInt(lunghezza.trim(), 10) });
+					}
                 }
+				
             }
 
             return result; // Restituisce l'array di tubi
@@ -189,19 +200,5 @@
             doc.save('risultati_taglio_pedroncelli.pdf');
         }
     </script>
-
-    <!-- Default Statcounter code for github https://mazz0ni.github.io/ -->
-    <script type="text/javascript">
-    var sc_project=13101153; 
-    var sc_invisible=1; 
-    var sc_security="2c0b9e8f"; 
-    </script>
-    <script type="text/javascript"
-    src="https://www.statcounter.com/counter/counter.js" async></script>
-    <noscript><div class="statcounter"><a title="Web Analytics"
-    href="https://statcounter.com/" target="_blank"><img class="statcounter"
-    src="https://c.statcounter.com/13101153/0/2c0b9e8f/1/" alt="Web Analytics"
-    referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
-    <!-- End of Statcounter Code -->
 </body>
 </html>
