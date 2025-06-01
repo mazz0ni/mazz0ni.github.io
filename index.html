@@ -1,10 +1,4 @@
-<!---
-<?php
-	session_start();
-	if(!isset($_SESSION['logged']) || !$_SESSION['logged']) header('Location: login.php');
-?>
--->
-<!DOCTYPE html>
+<!DOCTYPE html>More actions
 <html lang="it">
 <head>
     <!-- Metadati del documento -->
@@ -17,22 +11,22 @@
     <div class="container">
         <!-- Titolo principale della pagina -->
         <h1>Taglio Pedroncelli</h1>
-        
+
         <!-- Descrizione della funzionalità della pagina -->
         <p>Carica un file CSV con i dati dei tubi e inserisci la lunghezza della verga per calcolare la soluzione.<br/>Il file .CSV dovrà essere in formato nome;lunghezza</p>
-        
+
         <!-- Input per il caricamento del file CSV -->
         <input type="file" id="fileInput" accept=".csv">
-        
+
         <!-- Input per specificare la lunghezza della verga -->
         <input type="number" id="lunghezzaStock" placeholder="Lunghezza della verga (mm)">
-        
+
         <!-- Bottone per avviare l'elaborazione dei dati -->
         <button onclick="eseguiProblema()">Esegui</button>
 
         <!-- Bottone per esportare i dati in PDF -->
         <button onclick="esportaPDF()">Esporta PDF</button>
-        
+
         <!-- Div per mostrare i risultati dell'elaborazione -->
         <div class="output" id="output"></div>
     </div>
@@ -63,15 +57,10 @@
             const result = [];
 
             for (let line of lines) {
-				
-				const [nome, lunghezza, numero] = line.split(';');
-				if (nome && lunghezza && numero) {
-					for(let i=0; i<numero; i++){
-						console.log("boh");
-						result.push({ nome: nome.trim(), lunghezza: parseInt(lunghezza.trim(), 10) });
-					}
+                const [nome, lunghezza] = line.split(';'); // Separazione dei campi per ogni riga
+                if (nome && lunghezza) {
+                    result.push({ nome: nome.trim(), lunghezza: parseInt(lunghezza.trim(), 10) });
                 }
-				
             }
 
             return result; // Restituisce l'array di tubi
@@ -200,5 +189,19 @@
             doc.save('risultati_taglio_pedroncelli.pdf');
         }
     </script>
+
+    <!-- Default Statcounter code for github https://mazz0ni.github.io/ -->
+    <script type="text/javascript">
+    var sc_project=13101153; 
+    var sc_invisible=1; 
+    var sc_security="2c0b9e8f"; 
+    </script>
+    <script type="text/javascript"
+    src="https://www.statcounter.com/counter/counter.js" async></script>
+    <noscript><div class="statcounter"><a title="Web Analytics"
+    href="https://statcounter.com/" target="_blank"><img class="statcounter"
+    src="https://c.statcounter.com/13101153/0/2c0b9e8f/1/" alt="Web Analytics"
+    referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
+    <!-- End of Statcounter Code -->
 </body>
 </html>
