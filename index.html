@@ -1,207 +1,261 @@
-<!DOCTYPE html>More actions
+<!DOCTYPE html>
 <html lang="it">
 <head>
-    <!-- Metadati del documento -->
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="indexcss.css">
-    <title>Taglio Pedroncelli</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="indexcss.css">
+  <title>Taglio Pedroncelli</title>
 </head>
+
 <body>
-    <div class="container">
-        <!-- Titolo principale della pagina -->
-        <h1>Taglio Pedroncelli</h1>
+  <div class="container">
+    <h1>Taglio Pedroncelli</h1>
 
-        <!-- Descrizione della funzionalità della pagina -->
-        <p>Carica un file CSV con i dati dei tubi e inserisci la lunghezza della verga per calcolare la soluzione.<br/>Il file .CSV dovrà essere in formato nome;lunghezza</p>
+    <p>
+      Carica un file CSV con i dati dei tubi e inserisci la lunghezza della verga per calcolare la soluzione.<br>
+      Il file <code>.CSV</code> deve essere nel formato <strong>nome;lunghezza</strong> (in mm).
+    </p>
 
-        <!-- Input per il caricamento del file CSV -->
+    <!-- Input principali -->
+    <div class="controls">
+      <div>
+        <label for="fileInput">File CSV</label>
         <input type="file" id="fileInput" accept=".csv">
+      </div>
 
-        <!-- Input per specificare la lunghezza della verga -->
-        <input type="number" id="lunghezzaStock" placeholder="Lunghezza della verga (mm)">
+      <div>
+        <label for="lunghezzaStock">Lunghezza verga (mm)</label>
+        <input type="number" id="lunghezzaStock" placeholder="Lunghezza della verga (mm)" min="1" step="1">
+      </div>
 
-        <!-- Bottone per avviare l'elaborazione dei dati -->
-        <button onclick="eseguiProblema()">Esegui</button>
+      <div>
+        <label for="materiale">Materiale</label>
+        <select id="materiale" title="Seleziona il materiale: il kerf predefinito si aggiorna automaticamente.">
+          <option value="Acciaio">Acciaio</option>
+          <option value="Inox">Inox</option>
+          <option value="Alluminio">Alluminio</option>
+          <option value="Rame">Rame</option>
+          <option value="Ottone">Ottone</option>
+          <option value="PVC">PVC</option>
+          <option value="Altro">Altro (imposta manualmente)</option>
+        </select>
+      </div>
 
-        <!-- Bottone per esportare i dati in PDF -->
-        <button onclick="esportaPDF()">Esporta PDF</button>
+      <div>
+        <label for="kerf">Kerf (mm)</label>
+        <input type="number" id="kerf" placeholder="Spessore lama (mm)" min="0" step="0.1">
+        <div class="note">
+          Il valore si aggiorna automaticamente in base al materiale selezionato.<br>
+          Puoi modificarlo manualmente se usi una lama o una macchina diversa.
+        </div>
+      </div>
 
-        <!-- Div per mostrare i risultati dell'elaborazione -->
-        <div class="output" id="output"></div>
+      <div class="row" style="grid-column: 1 / -1;">
+        <input type="checkbox" id="usaNmeno1">
+        <label for="usaNmeno1" style="font-weight: 500;">
+          Considera <strong>N−1 tagli per verga</strong>: il primo pezzo non consuma lama.<br>
+          (Lascia <strong>deselezionato</strong> se vuoi includere un taglio anche per il primo pezzo → modalità più prudente.)
+        </label>
+      </div>
     </div>
 
-    <!-- Inclusione della libreria jsPDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <!-- Bottoni -->
+    <div class="row" style="margin: .5rem 0 1rem;">
+      <button onclick="eseguiProblema()">Esegui</button>
+      <button onclick="esportaPDF()">Esporta PDF</button>
+    </div>
 
-    <script>
-        // Array per contenere i dati dei tubi caricati dal file CSV
-        let richiesti = [];
+    <!-- Output risultati -->
+    <div class="output" id="output"></div>
+  </div>
 
-        // Event listener per il caricamento del file CSV
-        document.getElementById('fileInput').addEventListener('change', (event) => {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    const text = e.target.result;
-                    richiesti = parseCSV(text); // Parsing del file CSV
-                };
-                reader.readAsText(file);
-            }
+  <!-- Libreria jsPDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+
+  <script>
+    // ==============================
+    // Valori predefiniti di kerf (mm) per materiale
+    // ==============================
+    const KERF_MATERIAL_DEFAULT = {
+      'Acciaio': 3.0,
+      'Inox': 3.0,
+      'Alluminio': 2.0,
+      'Rame': 2.5,
+      'Ottone': 2.5,
+      'PVC': 1.5
+    };
+
+    let richiesti = [];
+
+    function fmtMM(v) {
+      if (Number.isInteger(v)) return v.toString();
+      const s = v.toFixed(2);
+      return s.endsWith('.00') ? parseInt(v, 10).toString() : s;
+    }
+
+    const materialeEl = document.getElementById('materiale');
+    const kerfEl = document.getElementById('kerf');
+
+    function aggiornaKerfDaMateriale() {
+      const mat = materialeEl.value;
+      if (KERF_MATERIAL_DEFAULT.hasOwnProperty(mat)) {
+        kerfEl.value = KERF_MATERIAL_DEFAULT[mat];
+      } else {
+        kerfEl.placeholder = "Inserisci kerf manualmente (mm)";
+      }
+    }
+
+    materialeEl.addEventListener('change', aggiornaKerfDaMateriale);
+    aggiornaKerfDaMateriale();
+
+    document.getElementById('fileInput').addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const text = e.target.result;
+          richiesti = parseCSV(text);
+        };
+        reader.readAsText(file);
+      }
+    });
+
+    function parseCSV(data) {
+      const lines = data.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const result = [];
+      for (let line of lines) {
+        const [nomeRaw, lunghezzaRaw] = line.split(';');
+        const nome = (nomeRaw || '').trim();
+        const lunghezza = parseFloat((lunghezzaRaw || '').replace(',', '.').trim());
+        if (nome && !isNaN(lunghezza) && lunghezza > 0) {
+          result.push({ nome, lunghezza });
+        }
+      }
+      return result;
+    }
+
+    function solveCuttingProblem(richiesti, lunghezzaStock, kerf, usaNmeno1) {
+      const richiestiOrd = [...richiesti].sort((a, b) => b.lunghezza - a.lunghezza);
+      let soluzioni = [];
+      let usedPerStock = [];
+      let numeroVerghe = 0;
+
+      for (let tubo of richiestiOrd) {
+        let inserito = false;
+
+        for (let i = 0; i < numeroVerghe; i++) {
+          const pezziGiaPresenti = soluzioni[i].length;
+          const costoKerf = (usaNmeno1 && pezziGiaPresenti === 0) ? 0 : kerf;
+          const nuovoUsato = usedPerStock[i] + tubo.lunghezza + costoKerf;
+
+          if (nuovoUsato <= lunghezzaStock) {
+            soluzioni[i].push(tubo);
+            usedPerStock[i] = nuovoUsato;
+            inserito = true;
+            break;
+          }
+        }
+
+        if (!inserito) {
+          const costoKerfIniziale = usaNmeno1 ? 0 : kerf;
+          const usatoIniziale = tubo.lunghezza + costoKerfIniziale;
+          if (usatoIniziale > lunghezzaStock) {
+            throw new Error(`Il pezzo "${tubo.nome}" (${fmtMM(tubo.lunghezza)} mm) non entra in una verga da ${fmtMM(lunghezzaStock)} mm con il kerf (${fmtMM(kerf)} mm, regola ${usaNmeno1 ? 'N−1' : 'N'} tagli).`);
+          }
+          soluzioni[numeroVerghe] = [tubo];
+          usedPerStock[numeroVerghe] = usatoIniziale;
+          numeroVerghe++;
+        }
+      }
+
+      return { verghe: soluzioni };
+    }
+
+    function calcolaScarto(verghe, lunghezzaStock, kerf, usaNmeno1) {
+      let scartoTotale = 0;
+      for (let stock of verghe) {
+        const somma = stock.reduce((acc, t) => acc + t.lunghezza, 0);
+        const pezzi = stock.length;
+        const tagli = usaNmeno1 ? Math.max(pezzi - 1, 0) : pezzi;
+        const usato = somma + kerf * tagli;
+        scartoTotale += lunghezzaStock - usato;
+      }
+      return scartoTotale;
+    }
+
+    function eseguiProblema() {
+      try {
+        if (richiesti.length === 0) {
+          alert('Carica prima un file CSV con i dati dei tubi.');
+          return;
+        }
+
+        const lunghezzaStock = parseFloat(document.getElementById('lunghezzaStock').value);
+        const materiale = document.getElementById('materiale').value;
+        const kerf = parseFloat(document.getElementById('kerf').value);
+        const usaNmeno1 = document.getElementById('usaNmeno1').checked;
+
+        if (isNaN(lunghezzaStock) || lunghezzaStock <= 0) {
+          alert('Inserisci una lunghezza valida per la verga.');
+          return;
+        }
+
+        const { verghe } = solveCuttingProblem(richiesti, lunghezzaStock, kerf, usaNmeno1);
+        const scartoTotale = calcolaScarto(verghe, lunghezzaStock, kerf, usaNmeno1);
+
+        const output = document.getElementById('output');
+        output.innerHTML = `
+          <h2>Risultati</h2>
+          <p>Materiale: <strong>${materiale}</strong> — Kerf: <strong>${fmtMM(kerf)} mm</strong> — Regola tagli: <strong>${usaNmeno1 ? 'N−1' : 'N'}</strong></p>
+          <p>Numero totale di tubi: <strong>${richiesti.length}</strong></p>
+          <p>Numero minimo di verghe: <strong>${verghe.length}</strong></p>
+        `;
+
+        verghe.forEach((stock, i) => {
+          const vergaDiv = document.createElement('div');
+          vergaDiv.classList.add('verga');
+
+          const pezzi = stock.length;
+          const somma = stock.reduce((acc, t) => acc + t.lunghezza, 0);
+          const tagli = usaNmeno1 ? Math.max(pezzi - 1, 0) : pezzi;
+          const kerfTot = kerf * tagli;
+          const usato = somma + kerfTot;
+          const residuo = lunghezzaStock - usato;
+
+          const vergaHeader = document.createElement('h3');
+          vergaHeader.textContent = `Verga ${i + 1}`;
+          vergaDiv.appendChild(vergaHeader);
+
+          const stats = document.createElement('p');
+          stats.innerHTML = `
+            Pezzi: <strong>${pezzi}</strong> — Tagli: <strong>${tagli}</strong><br>
+            Lunghezze pezzi: <strong>${fmtMM(somma)} mm</strong> — Kerf totale: <strong>${fmtMM(kerfTot)} mm</strong><br>
+            Usato: <strong>${fmtMM(usato)} mm</strong> / Residuo: <strong>${fmtMM(residuo)} mm</strong>
+          `;
+          vergaDiv.appendChild(stats);
+
+          stock.forEach(tubo => {
+            const tuboDiv = document.createElement('div');
+            tuboDiv.classList.add('tubo');
+            tuboDiv.textContent = `${tubo.nome} (${fmtMM(tubo.lunghezza)} mm)`;
+            vergaDiv.appendChild(tuboDiv);
+          });
+
+          output.appendChild(vergaDiv);
         });
 
-        // Funzione per leggere e analizzare i dati del file CSV
-        function parseCSV(data) {
-            const lines = data.split('\n'); // Separazione delle righe
-            const result = [];
+        output.innerHTML += `<p>Scarto totale (incluso il kerf): <strong>${fmtMM(scartoTotale)} mm</strong></p>`;
+      } catch (err) {
+        alert(err.message || err.toString());
+      }
+    }
 
-            for (let line of lines) {
-                const [nome, lunghezza] = line.split(';'); // Separazione dei campi per ogni riga
-                if (nome && lunghezza) {
-                    result.push({ nome: nome.trim(), lunghezza: parseInt(lunghezza.trim(), 10) });
-                }
-            }
-
-            return result; // Restituisce l'array di tubi
-        }
-
-        // Algoritmo per risolvere il problema del taglio dello stock
-        function solveCuttingProblem(richiesti, lunghezzaStock) {
-            richiesti.sort((a, b) => b.lunghezza - a.lunghezza); // Ordina i tubi in ordine decrescente
-
-            let maxVerghe = richiesti.length; // Numero massimo di verghe possibile
-            let soluzioni = new Array(maxVerghe); // Array per memorizzare le soluzioni
-            let sumPerStock = new Array(maxVerghe); // Array per tenere traccia delle somme per ogni verga
-
-            let numeroVerghe = 0; // Numero di verghe utilizzate
-
-            for (let tubo of richiesti) {
-                let inserito = false;
-
-                for (let i = 0; i < numeroVerghe; i++) {
-                    if (sumPerStock[i] + tubo.lunghezza <= lunghezzaStock) {
-                        soluzioni[i].push(tubo); // Inserisce il tubo nella verga corrente
-                        sumPerStock[i] += tubo.lunghezza; // Aggiorna la lunghezza usata
-                        inserito = true;
-                        break;
-                    }
-                }
-
-                if (!inserito) {
-                    soluzioni[numeroVerghe] = [tubo]; // Crea una nuova verga
-                    sumPerStock[numeroVerghe] = tubo.lunghezza;
-                    numeroVerghe++;
-                }
-            }
-
-            return soluzioni.slice(0, numeroVerghe); // Restituisce solo le verghe utilizzate
-        }
-
-        // Funzione per calcolare lo spazio inutilizzato (scarto)
-        function calcolaScarto(soluzioni, lunghezzaStock) {
-            let scartoTotale = 0;
-            for (let stock of soluzioni) {
-                let somma = stock.reduce((acc, tubo) => acc + tubo.lunghezza, 0);
-                scartoTotale += lunghezzaStock - somma;
-            }
-            return scartoTotale; // Restituisce lo scarto totale
-        }
-
-        // Funzione principale per eseguire il problema
-        function eseguiProblema() {
-            if (richiesti.length === 0) {
-                alert('Carica prima un file CSV con i dati dei tubi.');
-                return;
-            }
-
-            const lunghezzaStock = parseInt(document.getElementById('lunghezzaStock').value, 10);
-            if (isNaN(lunghezzaStock) || lunghezzaStock <= 0) {
-                alert('Inserisci una lunghezza valida per la verga.');
-                return;
-            }
-
-            const soluzioni = solveCuttingProblem(richiesti, lunghezzaStock); // Risolve il problema
-
-            const output = document.getElementById('output');
-            output.innerHTML = `<h2>Risultati</h2>`;
-            output.innerHTML += `<p>Numero totale di tubi: <strong>${richiesti.length}</strong></p>`;
-            output.innerHTML += `<p>Numero minimo di verghe: <strong>${soluzioni.length}</strong></p>`;
-
-            soluzioni.forEach((stock, i) => {
-                const vergaDiv = document.createElement('div');
-                vergaDiv.classList.add('verga');
-
-                const vergaHeader = document.createElement('h3');
-                vergaHeader.textContent = `Verga ${i + 1}`;
-                vergaDiv.appendChild(vergaHeader);
-
-                stock.forEach(tubo => {
-                    const tuboDiv = document.createElement('div');
-                    tuboDiv.classList.add('tubo');
-                    tuboDiv.textContent = `${tubo.nome} (${tubo.lunghezza} mm)`;
-                    vergaDiv.appendChild(tuboDiv);
-                });
-
-                output.appendChild(vergaDiv);
-            });
-
-            const scarto = calcolaScarto(soluzioni, lunghezzaStock);
-            output.innerHTML += `<p>Scarto totale: <strong>${scarto} mm</strong></p>`;
-        }
-
-        // Funzione per esportare i dati in un file PDF
-        function esportaPDF() {
-            const { jsPDF } = window.jspdf;
-            const doc = new jsPDF();
-
-            let y = 10;
-            doc.setFontSize(16);
-            doc.text('Risultati del Taglio Pedroncelli', 10, y);
-
-            y += 10;
-            doc.setFontSize(12);
-            doc.text(`Numero totale di tubi: ${richiesti.length}`, 10, y);
-
-            y += 10;
-            const lunghezzaStock = parseInt(document.getElementById('lunghezzaStock').value, 10);
-            const soluzioni = solveCuttingProblem(richiesti, lunghezzaStock);
-            doc.text(`Numero minimo di verghe: ${soluzioni.length}`, 10, y);
-
-            y += 10;
-            const scarto = calcolaScarto(soluzioni, lunghezzaStock);
-            doc.text(`Scarto totale: ${scarto} mm`, 10, y);
-
-            y += 10;
-            soluzioni.forEach((stock, i) => {
-                doc.text(`Verga ${i + 1}:`, 10, y);
-                y += 10;
-                stock.forEach(tubo => {
-                    doc.text(`- ${tubo.nome}: ${tubo.lunghezza} mm`, 20, y);
-                    y += 10;
-                    if (y > 280) {
-                        doc.addPage();
-                        y = 10;
-                    }
-                });
-            });
-
-            doc.save('risultati_taglio_pedroncelli.pdf');
-        }
-    </script>
-
-    <!-- Default Statcounter code for github https://mazz0ni.github.io/ -->
-    <script type="text/javascript">
-    var sc_project=13101153; 
-    var sc_invisible=1; 
-    var sc_security="2c0b9e8f"; 
-    </script>
-    <script type="text/javascript"
-    src="https://www.statcounter.com/counter/counter.js" async></script>
-    <noscript><div class="statcounter"><a title="Web Analytics"
-    href="https://statcounter.com/" target="_blank"><img class="statcounter"
-    src="https://c.statcounter.com/13101153/0/2c0b9e8f/1/" alt="Web Analytics"
-    referrerPolicy="no-referrer-when-downgrade"></a></div></noscript>
-    <!-- End of Statcounter Code -->
+    function esportaPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Funzione PDF in sviluppo", 10, 10);
+      doc.save("risultati_taglio_pedroncelli.pdf");
+    }
+  </script>
 </body>
 </html>
